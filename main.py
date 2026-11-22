@@ -1,21 +1,32 @@
-"""news-image-20261121: emit the finished full-day front page.
+#!/usr/bin/env python3
+"""Deliver the bundled broadsheet image to the grader's output folder.
 
-The front page for Saturday 21 November 2026 lives next to this file
-as entry.png (built by build_image.py: a Pillow renderer drawing the
-masthead, four illustrated lead scenes, ten pictogram tiles, a
-markets strip, a pinned world map, a 31-item index, a five-acts strip
-and a date check -- 45 verified stories of the full day). The grading
-sandbox has no network and runs this program twice, so all this
-program does is copy those exact bytes to the output directory: two
-runs, one identical file.
+The artwork is finished ahead of time and stored beside this file as
+entry.png; all the entrypoint has to do is copy those bytes, unchanged,
+into the directory named by MAKEFUN_OUTPUT_DIR.
 """
-from pathlib import Path
+
 import os
-import shutil
+import sys
+from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-SOURCE = ROOT / "entry.png"
+BLOCK = 128 * 1024  # copy the image in 128 KiB blocks
 
-OUT_DIR = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(SOURCE, OUT_DIR / "entry.png")
+
+def main() -> int:
+    here = Path(__file__).resolve().parent
+    source = here / "entry.png"
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target = out_dir / source.name
+    with source.open("rb") as fin, target.open("wb") as fout:
+        while block := fin.read(BLOCK):
+            fout.write(block)
+    if target.stat().st_size != source.stat().st_size:
+        raise SystemExit("copied image came out a different size; refusing to deliver it")
+    print(f"wrote {target} ({target.stat().st_size} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
